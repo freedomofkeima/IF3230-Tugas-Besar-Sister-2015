@@ -38,3 +38,11 @@ Set the following lines to ```/etc/profile```:
 ## How to Run
 
 - In release environment, please use ```nohup go run main.go & > my.log 2>&1&``` for running tracker process in background. After that, use ```echo $! > save_pid.txt``` to get Process ID.
+
+
+## Additional Information
+
+- Developer note: On release (32.46), use account 'freedomofkeima' for MySQL username and '167.205.32.46' for IP address.
+
+
+Last Updated: March 6, 2015

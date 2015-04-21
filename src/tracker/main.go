@@ -58,6 +58,13 @@ var current_port int // current Port
 
 /** Insert data to DB */
 func InsertData(conn net.Conn, ip uint32, port int) {
+    // recovery
+    defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("InsertData goroutine paniced:", r)
+        }
+    }()
+
     _, err := db.Query("INSERT IGNORE INTO client_info(ip, port) VALUES(?, ?)", ip, port)
     if err != nil {
         if conn != nil {
@@ -69,6 +76,13 @@ func InsertData(conn net.Conn, ip uint32, port int) {
 }
 
 func DeleteData(ip uint32, port int) {
+    // recovery
+    defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("DeleteData goroutine paniced:", r)
+        }
+    }()
+
     _, err := db.Query("DELETE FROM client_info WHERE ip=? AND port=?", ip, port)
     if err != nil {
         fmt.Println(err.Error())
@@ -77,6 +91,13 @@ func DeleteData(ip uint32, port int) {
 
 /** Retrieve all available clients from DB */
 func RetrieveData(conn net.Conn, code int) string { // code 0 = inbound; 1 = outbound
+    // recovery
+    defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("RetrieveData goroutine paniced:", r)
+        }
+    }()
+
     rows, err := db.Query("SELECT * FROM client_info")
     if err != nil {
         RespondWithRealm(conn, errors.New("Error in database connection"))
@@ -93,6 +114,9 @@ func RetrieveData(conn net.Conn, code int) string { // code 0 = inbound; 1 = out
         ip_str := Long2ip(ip)
         if err != nil {
             RespondWithRealm(conn, errors.New("IP address is not valid"))
+        }
+        if ip_str == "167.205.32.46" && port == 8000 {
+            continue
         }
         if code == 0 {
             messageObject.Value = append(messageObject.Value, LogValue{Ip: ip_str, Port: port})
@@ -121,18 +145,29 @@ func RetrieveData(conn net.Conn, code int) string { // code 0 = inbound; 1 = out
 
 /** Handling connection from client */
 func HandleConnection(conn net.Conn) {
+    // recovery
+    defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("HandleConnection goroutine paniced:", r)
+        }
+    }()
+
     var ip_long string
     var port_int float64
 
     remoteAddress := conn.RemoteAddr().String() // broadcast statusServer except this address
     fmt.Println("**Initiate connection with " + remoteAddress  + "**")
     readBuf := make([]byte, 4096)
-    conn.Read(readBuf) // accept JSON input from clients
+    _, err := conn.Read(readBuf) // accept JSON input from clients
+    if err != nil {
+        RespondWithRealm(conn, errors.New("Error in Reading Input"))
+    }
+
     length := bytes.Index(readBuf, []byte{0})
 
     // Convert []byte to map interface
     var value map[string]interface{}
-    err := json.Unmarshal(readBuf[:length], &value)
+    err = json.Unmarshal(readBuf[:length], &value)
     if err != nil {
         RespondWithRealm(conn, errors.New("Error in JSON parsing"))
     }
@@ -202,6 +237,13 @@ func HandleConnection(conn net.Conn) {
 }
 
 func sendServerStatus(address string, data string) {
+    // recovery
+    defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("sendServerStatus goroutine paniced:", r)
+        }
+    }()
+
     fmt.Println("Send to: " + address)
     conn, err := net.DialTimeout("tcp", address, 3 * time.Second) // 3 secs
     if err != nil {
@@ -219,6 +261,13 @@ func sendServerStatus(address string, data string) {
 }
 
 func broadcastAll(address string) { // exclude requester address
+    // recovery
+    defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("broadcastAll goroutine paniced:", r)
+        }
+    }()
+
     rows, err := db.Query("SELECT * FROM client_info")
     data := RetrieveData(nil, 1)
     if err != nil {
@@ -241,6 +290,13 @@ func broadcastAll(address string) { // exclude requester address
 }
 
 func TimeoutCheck(address string, wg *sync.WaitGroup) {
+    // recovery
+    defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("TimeoutCheck goroutine paniced:", r)
+        }
+    }()
+
     defer wg.Done()
     fmt.Println("Now checking " + address)
     connTest, err := net.DialTimeout("tcp", address, 3 * time.Second) // 3 secs
@@ -264,6 +320,13 @@ func TimeoutCheck(address string, wg *sync.WaitGroup) {
 }
 
 func main() {
+    // "main" recovery
+    defer func() {
+        if r := recover(); r != nil {
+            fmt.Println("main goroutine paniced:", r)
+        }
+    }()
+
     var err error
     addrs, err := net.InterfaceAddrs()
     if err != nil {
@@ -280,13 +343,16 @@ func main() {
 
     current_port = 8000
     fmt.Println("Your address is: " + ip_address + ":" + strconv.Itoa(current_port))
-    /*
-    ip_long, err := Ip2long(ip_address)
+/**
+    ip_long, err := Ip2long("167.205.32.46")
     if err != nil {
         // handle error
     }
-    */
-    db, err = sql.Open("mysql","root@tcp(127.0.0.1:3306)/sister_tracker")
+*/
+    db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
+    if err != nil {
+        // handle error
+    }
     // InsertData(nil, ip_long, current_port) // add own IP address information
     fmt.Println("**Finish Initializing**")
 
