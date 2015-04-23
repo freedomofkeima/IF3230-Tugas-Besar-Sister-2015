@@ -65,6 +65,13 @@ func InsertData(conn net.Conn, ip uint32, port int) {
             fmt.Println("InsertData goroutine paniced:", r)
         }
     }()
+    if (db == nil) {
+        var err error
+        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
+        if err != nil {
+            // handle error
+        }
+    }
     
     db_mux.Lock()
     _, err := db.Query("INSERT IGNORE INTO client_info(ip, port) VALUES(?, ?)", ip, port)
@@ -85,6 +92,13 @@ func DeleteData(ip uint32, port int) {
             fmt.Println("DeleteData goroutine paniced:", r)
         }
     }()
+    if (db == nil) {
+        var err error
+        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
+        if err != nil {
+            // handle error
+        }
+    }
     
     db_mux.Lock()
     _, err := db.Query("DELETE FROM client_info WHERE ip=? AND port=?", ip, port)
@@ -102,6 +116,13 @@ func RetrieveData(conn net.Conn, code int) string { // code 0 = inbound; 1 = out
             fmt.Println("RetrieveData goroutine paniced:", r)
         }
     }()
+    if (db == nil) {
+        var err error
+        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
+        if err != nil {
+            // handle error
+        }
+    }
 
     db_mux.Lock()
     rows, err := db.Query("SELECT * FROM client_info")
@@ -158,6 +179,13 @@ func HandleConnection(conn net.Conn) {
             fmt.Println("HandleConnection goroutine paniced:", r)
         }
     }()
+    if (db == nil) {
+        var err error
+        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
+        if err != nil {
+            // handle error
+        }
+    }
 
     var ip_long string
     var port_int float64
@@ -252,6 +280,13 @@ func sendServerStatus(address string, data string) {
             fmt.Println("sendServerStatus goroutine paniced:", r)
         }
     }()
+    if (db == nil) {
+        var err error
+        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
+        if err != nil {
+            // handle error
+        }
+    }
 
     fmt.Println("Send to: " + address)
     conn, err := net.DialTimeout("tcp", address, 3 * time.Second) // 3 secs
@@ -276,8 +311,15 @@ func broadcastAll(address string) { // exclude requester address
             fmt.Println("broadcastAll goroutine paniced:", r)
         }
     }()
+    if (db == nil) {
+        var err error
+        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
+        if err != nil {
+            // handle error
+        }
+    }
     
-    db_mux.Lock()
+    // db_mux.Lock()
     rows, err := db.Query("SELECT * FROM client_info")
     data := RetrieveData(nil, 1)
     if err != nil {
@@ -296,7 +338,11 @@ func broadcastAll(address string) { // exclude requester address
             go sendServerStatus(currentAddress, data)
         }
     }
-    db_mux.Unlock()
+    err = rows.Err()
+    if (err != nil) {
+        // handle errors
+    }
+    // db_mux.Unlock()
     fmt.Println("Send data: " + data)
 }
 
@@ -307,6 +353,13 @@ func TimeoutCheck(address string, wg *sync.WaitGroup) {
             fmt.Println("TimeoutCheck goroutine paniced:", r)
         }
     }()
+    if (db == nil) {
+        var err error
+        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
+        if err != nil {
+            // handle error
+        }
+    }
 
     defer wg.Done()
     fmt.Println("Now checking " + address)
@@ -337,6 +390,13 @@ func main() {
             fmt.Println("main goroutine paniced:", r)
         }
     }()
+    if (db == nil) {
+        var err error
+        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
+        if err != nil {
+            // handle error
+        }
+    }
 
     var err error
     addrs, err := net.InterfaceAddrs()
