@@ -53,6 +53,7 @@ type MessageOutJSON struct {
 }
 
 var db *sql.DB // database global_variable
+var db_mux = &sync.Mutex{} // global mutex for database
 var ip_address string // current IP address
 var current_port int // current Port
 
@@ -64,7 +65,8 @@ func InsertData(conn net.Conn, ip uint32, port int) {
             fmt.Println("InsertData goroutine paniced:", r)
         }
     }()
-
+    
+    db_mux.Lock()
     _, err := db.Query("INSERT IGNORE INTO client_info(ip, port) VALUES(?, ?)", ip, port)
     if err != nil {
         if conn != nil {
@@ -73,6 +75,7 @@ func InsertData(conn net.Conn, ip uint32, port int) {
             fmt.Println(err.Error())
         }
     }
+    db_mux.Unlock()
 }
 
 func DeleteData(ip uint32, port int) {
@@ -82,11 +85,13 @@ func DeleteData(ip uint32, port int) {
             fmt.Println("DeleteData goroutine paniced:", r)
         }
     }()
-
+    
+    db_mux.Lock()
     _, err := db.Query("DELETE FROM client_info WHERE ip=? AND port=?", ip, port)
     if err != nil {
         fmt.Println(err.Error())
     }
+    db_mux.Unlock()
 }
 
 /** Retrieve all available clients from DB */
@@ -98,6 +103,7 @@ func RetrieveData(conn net.Conn, code int) string { // code 0 = inbound; 1 = out
         }
     }()
 
+    db_mux.Lock()
     rows, err := db.Query("SELECT * FROM client_info")
     if err != nil {
         RespondWithRealm(conn, errors.New("Error in database connection"))
@@ -125,6 +131,7 @@ func RetrieveData(conn net.Conn, code int) string { // code 0 = inbound; 1 = out
         }
         
     }
+    db_mux.Unlock()
 
     var encodedMessage []byte
     if code == 0 {
@@ -203,6 +210,7 @@ func HandleConnection(conn net.Conn) {
             InsertData(conn, ip_uint32, int(port_int))
 
             var wg sync.WaitGroup
+            db_mux.Lock()
             rows, err := db.Query("SELECT * FROM client_info")
             if err != nil {
                 RespondWithRealm(conn, errors.New("Error in database connection"))
@@ -220,6 +228,7 @@ func HandleConnection(conn net.Conn) {
                     go TimeoutCheck(ip_str + ":" + port_str, &wg)
                 }
             }
+            db_mux.Unlock()
             wg.Wait() // wait
             port_str := strconv.Itoa(int(port_int))
             go broadcastAll(ip_long + ":" + port_str) // async broadcast
@@ -267,7 +276,8 @@ func broadcastAll(address string) { // exclude requester address
             fmt.Println("broadcastAll goroutine paniced:", r)
         }
     }()
-
+    
+    db_mux.Lock()
     rows, err := db.Query("SELECT * FROM client_info")
     data := RetrieveData(nil, 1)
     if err != nil {
@@ -286,6 +296,7 @@ func broadcastAll(address string) { // exclude requester address
             go sendServerStatus(currentAddress, data)
         }
     }
+    db_mux.Unlock()
     fmt.Println("Send data: " + data)
 }
 
