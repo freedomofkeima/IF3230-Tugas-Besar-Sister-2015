@@ -42,7 +42,7 @@ For maintaining our process to keep running in the presence of failure, we'll us
 ```
 ### Monitor Sister Tracker
 check process sistertracker with pidfile /home/path-to-file/run.pid
-  start program = "/bin/bash -c 'cd /home/path-to-file; nohup /path-to-go/bin/go run main.go > my.log 2>&1 & echo $! > run.pid'" with timeout 5 seconds
+  start program = "/bin/bash -c 'cd /home/path-to-file; nohup /path-to-go/bin/go run main.go >> my.log 2>&1 & echo $! > run.pid'" with timeout 5 seconds
   stop program ="/bin/kill -9 `cat /home/path-to-file/run.pid`"
 ```
 
