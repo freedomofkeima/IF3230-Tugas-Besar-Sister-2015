@@ -37,13 +37,15 @@ Set the following lines to ```/etc/profile```:
 
 ## How to Run
 
-For maintaining our process to keep running in the presence of failure, we'll use Monit 5.5 with the following configuration in ```etc/monit.conf```:
+Initially, we will build our Go program using ```go build main.go```.
+
+For maintaining our process to keep running in the presence of failure, we'll use Monit 5.5 with the following configuration in ```etc/monit.conf``` (we use ```freedomofkeima``` as non-root user to run this program):
 
 ```
 ### Monitor Sister Tracker
 check process sistertracker with pidfile /home/path-to-file/run.pid
-  start program = "/bin/bash -c 'cd /home/path-to-file; nohup /path-to-go/bin/go run main.go >> my.log 2>&1 & echo $! > run.pid'" with timeout 5 seconds
-  stop program ="/bin/kill -9 `cat /home/path-to-file/run.pid`"
+  start program = "/bin/bash -c 'cd /home/path-to-file; sudo -u freedomofkeima nohup ./main >> my.log 2>&1 & echo $! > run.pid'" with timeout 5 seconds
+  stop program ="/usr/bin/pkill -TERM -P `cat /home/path-to-file/run.pid`"
 ```
 
 After that, you can simply use ```service monit start``` to start Monit.
