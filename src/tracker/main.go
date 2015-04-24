@@ -266,7 +266,7 @@ func broadcastAll(address string) { // exclude requester address
 func TimeoutCheck(address string, wg *sync.WaitGroup) {
     defer wg.Done()
     fmt.Println("Now checking " + address)
-    connTest, err := net.DialTimeout("tcp", address, 3 * time.Second) // 3 secs
+    connTest, err := net.DialTimeout("tcp", address, 2 * time.Second) // 2 secs
     if err != nil {
         fmt.Println("TimeoutCheck: " + err.Error())
         // remove from DB
