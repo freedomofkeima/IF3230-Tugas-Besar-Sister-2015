@@ -59,20 +59,6 @@ var current_port int // current Port
 
 /** Insert data to DB */
 func InsertData(conn net.Conn, ip uint32, port int) {
-    // recovery
-    defer func() {
-        if r := recover(); r != nil {
-            fmt.Println("InsertData goroutine paniced:", r)
-        }
-    }()
-    if (db == nil) {
-        var err error
-        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
-        if err != nil {
-            // handle error
-        }
-    }
-    
     db_mux.Lock()
     _, err := db.Query("INSERT IGNORE INTO client_info(ip, port) VALUES(?, ?)", ip, port)
     if err != nil {
@@ -86,20 +72,6 @@ func InsertData(conn net.Conn, ip uint32, port int) {
 }
 
 func DeleteData(ip uint32, port int) {
-    // recovery
-    defer func() {
-        if r := recover(); r != nil {
-            fmt.Println("DeleteData goroutine paniced:", r)
-        }
-    }()
-    if (db == nil) {
-        var err error
-        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
-        if err != nil {
-            // handle error
-        }
-    }
-    
     db_mux.Lock()
     _, err := db.Query("DELETE FROM client_info WHERE ip=? AND port=?", ip, port)
     if err != nil {
@@ -110,24 +82,11 @@ func DeleteData(ip uint32, port int) {
 
 /** Retrieve all available clients from DB */
 func RetrieveData(conn net.Conn, code int) string { // code 0 = inbound; 1 = outbound
-    // recovery
-    defer func() {
-        if r := recover(); r != nil {
-            fmt.Println("RetrieveData goroutine paniced:", r)
-        }
-    }()
-    if (db == nil) {
-        var err error
-        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
-        if err != nil {
-            // handle error
-        }
-    }
-
     db_mux.Lock()
     rows, err := db.Query("SELECT * FROM client_info")
     if err != nil {
         RespondWithRealm(conn, errors.New("Error in database connection"))
+        fmt.Println(err)
     }
     defer rows.Close()
     messageObject := new(MessageInJSON)
@@ -173,20 +132,6 @@ func RetrieveData(conn net.Conn, code int) string { // code 0 = inbound; 1 = out
 
 /** Handling connection from client */
 func HandleConnection(conn net.Conn) {
-    // recovery
-    defer func() {
-        if r := recover(); r != nil {
-            fmt.Println("HandleConnection goroutine paniced:", r)
-        }
-    }()
-    if (db == nil) {
-        var err error
-        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
-        if err != nil {
-            // handle error
-        }
-    }
-
     var ip_long string
     var port_int float64
 
@@ -274,20 +219,6 @@ func HandleConnection(conn net.Conn) {
 }
 
 func sendServerStatus(address string, data string) {
-    // recovery
-    defer func() {
-        if r := recover(); r != nil {
-            fmt.Println("sendServerStatus goroutine paniced:", r)
-        }
-    }()
-    if (db == nil) {
-        var err error
-        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
-        if err != nil {
-            // handle error
-        }
-    }
-
     fmt.Println("Send to: " + address)
     conn, err := net.DialTimeout("tcp", address, 3 * time.Second) // 3 secs
     if err != nil {
@@ -305,20 +236,6 @@ func sendServerStatus(address string, data string) {
 }
 
 func broadcastAll(address string) { // exclude requester address
-    // recovery
-    defer func() {
-        if r := recover(); r != nil {
-            fmt.Println("broadcastAll goroutine paniced:", r)
-        }
-    }()
-    if (db == nil) {
-        var err error
-        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
-        if err != nil {
-            // handle error
-        }
-    }
-    
     // db_mux.Lock()
     rows, err := db.Query("SELECT * FROM client_info")
     data := RetrieveData(nil, 1)
@@ -347,20 +264,6 @@ func broadcastAll(address string) { // exclude requester address
 }
 
 func TimeoutCheck(address string, wg *sync.WaitGroup) {
-    // recovery
-    defer func() {
-        if r := recover(); r != nil {
-            fmt.Println("TimeoutCheck goroutine paniced:", r)
-        }
-    }()
-    if (db == nil) {
-        var err error
-        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
-        if err != nil {
-            // handle error
-        }
-    }
-
     defer wg.Done()
     fmt.Println("Now checking " + address)
     connTest, err := net.DialTimeout("tcp", address, 3 * time.Second) // 3 secs
@@ -384,20 +287,6 @@ func TimeoutCheck(address string, wg *sync.WaitGroup) {
 }
 
 func main() {
-    // "main" recovery
-    defer func() {
-        if r := recover(); r != nil {
-            fmt.Println("main goroutine paniced:", r)
-        }
-    }()
-    if (db == nil) {
-        var err error
-        db, err = sql.Open("mysql","freedomofkeima@tcp(127.0.0.1:3306)/sister_tracker")
-        if err != nil {
-            // handle error
-        }
-    }
-
     var err error
     addrs, err := net.InterfaceAddrs()
     if err != nil {
@@ -449,6 +338,7 @@ func RespondWithRealm(conn net.Conn, err error) {
     errorMessage := err.Error()
     message := "{\"status\": \"error\", \"description\": \""+ errorMessage +"\"}"
     _, err = conn.Write([]byte(message)) // send response
+    fmt.Println("Response: " + message)
     if err != nil {
         // handle error
     }

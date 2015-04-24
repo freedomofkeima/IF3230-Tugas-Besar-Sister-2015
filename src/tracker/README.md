@@ -37,12 +37,16 @@ Set the following lines to ```/etc/profile```:
 
 ## How to Run
 
-- In release environment, please use ```nohup go run main.go & > my.log 2>&1&``` for running tracker process in background. After that, use ```echo $! > save_pid.txt``` to get Process ID.
+For maintaining our process to keep running in the presence of failure, we'll use Monit 5.5 with the following configuration in ```etc/monit.conf```:
+
+```
+### Monitor Sister Tracker
+check process sistertracker with pidfile /home/path-to-file/run.pid
+  start program = "/bin/bash -c 'cd /home/path-to-file; nohup /path-to-go/bin/go run main.go > my.log 2>&1 & echo $! > run.pid'" with timeout 5 seconds
+  stop program ="/bin/kill -9 `cat /home/path-to-file/run.pid`"
+```
+
+After that, you can simply use ```service monit start``` to start Monit.
 
 
-## Additional Information
-
-- Developer note: On release (32.46), use account 'freedomofkeima' for MySQL username and '167.205.32.46' for IP address.
-
-
-Last Updated: March 6, 2015
+Last Updated: April 24, 2015
